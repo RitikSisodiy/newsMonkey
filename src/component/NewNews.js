@@ -6,8 +6,8 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import axios from "axios";
 
 
-export class News extends Component {
-    apiurl = "https://newsapi.org/v2/"
+export class NewNews extends Component {
+    apiurl = "https://free-news.p.rapidapi.com/v1/search"
     apikey = this.props.apikey
     apiurl1 = 'https://saurav.tech/NewsAPI/'
     genUrl = (apiurl,country,category,page,apikey,pageSize) =>{
@@ -21,25 +21,63 @@ export class News extends Component {
     articals = []
     constructor(props){
         super(props)
+        let param = {q:this.props.category, lang: 'en', page_size: '25'}
+        if (this.props.search){
+            console.log("working")
+            param = {...param,q:this.props.search}
+            console.log(param)
+            this.setState({param:param,})
+            console.log(this.state)
+        }
         this.state = {
             articals:this.articals,
             loading : false,
-            page : 1
+            page : 1,
+            param: param
         }
+        console.log(this.props.search)
+        
         document.title = `${this.props.category.charAt(0).toUpperCase() + this.props.category.slice(1)} - NewsMonkey`
         console.log("hello i am contructure from news component")
     }
     async updateNews(){
         this.props.setProgress(10)
-        let url = `${this.apiurl}top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.apikey}&pageSize=12&page=${this.state.page}`
-        this.setState({loading:true})
-        let data = await fetch(url)
+        // let url = `${this.apiurl}top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.apikey}&pageSize=12&page=${this.state.page}`
+        // let url = `${this.apiurl}top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.apikey}&pageSize=12&page=${this.state.page}`
+        // this.setState({loading:true})
+        let data = await this.makerequest(this.state.param)
+        console.log(data)
         this.props.setProgress(30)
-        let parseData = await data.json()
+        // let parseData = await data.json()
+        let parseData = data
         this.props.setProgress(60)
         console.log(parseData)
-        this.setState({loading:false,articals:parseData.articles,totalResult:parseData.totalResults})
+        this.setState({loading:false,articals:parseData.articles,totalResult:parseData.total_hits})
         this.props.setProgress(100)
+    }
+
+    async makerequest(param){
+        param = {...param,page:this.state.page}
+        return new Promise((resolve, reject) => {
+            const options = {
+                method: 'GET',
+                url: 'https://free-news.p.rapidapi.com/v1/search',
+                // params: {q: 'bitcoin', lang: 'en', page: '1', page_size: '25'},
+                params: param,
+                headers: {
+                  'x-rapidapi-key': this.apikey,
+                  'x-rapidapi-host': 'free-news.p.rapidapi.com'
+                }
+              };
+              
+              axios.request(options).then(function (response) {
+                  console.log(response.data)
+                  resolve(response.data);
+              }).catch(function (error) {
+                  reject(error);
+              });
+        });
+        
     }
    
     async componentDidMount(){
@@ -49,21 +87,7 @@ export class News extends Component {
         // let parseData = await data.json()
         // console.log(parseData)
         // this.setState({loading:false,articals:parseData.articles,totalResult:parseData.totalResults})
-        const options = {
-            method: 'GET',
-            url: 'https://free-news.p.rapidapi.com/v1/search',
-            params: {q: 'bitcoin', lang: 'en', page: '1', page_size: '25'},
-            headers: {
-              'x-rapidapi-key': '78c8ee801emshc80acecc3a4669cp18997cjsncaddf95b1a8d',
-              'x-rapidapi-host': 'free-news.p.rapidapi.com'
-            }
-          };
-          
-          axios.request(options).then(function (response) {
-              console.log(response.data);
-          }).catch(function (error) {
-              console.error(error);
-          });
+        
         this.setState({page:this.state.page})
         this.updateNews()
     }
@@ -100,12 +124,12 @@ export class News extends Component {
         this.setState({
             page:this.state.page+1,
         })
-        let url = `${this.apiurl}top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.apikey}&pageSize=12&page=${this.state.page}`
-        this.setState({loading:true})
-        let data = await fetch(url)
-        let parseData = await data.json()
+        // let url = `${this.apiurl}top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.apikey}&pageSize=12&page=${this.state.page}`
+        this.setState({loading:true,param:this.state.param})
+        let data =  await this.makerequest(this.state.param)
+        let parseData = await data
         console.log(parseData)
-        this.setState({loading:false,articals:this.state.articals.concat(parseData.articles),totalResult:parseData.totalResults})
+        this.setState({loading:false,articals:this.state.articals.concat(parseData.articles),totalResult:parseData.total_hits})
       };
     render() {
         var pagination = [];
@@ -135,7 +159,7 @@ export class News extends Component {
                     {this.state.articals.map((element)=>{
                         return element?(
                             <div key={element.url} className="col-md-3">
-                                <NewsItem  title={element.title?element.title.slice(0,45):""} discription={element.content?element.content.slice(0,85):""+"..."} date={dateFormat(element.publishedAt, "mmmm dS, yyyy")} src={element.urlToImage?element.urlToImage:"https://a4.espncdn.com/combiner/i?img=%2Fi%2Fcricket%2Fcricinfo%2F1219926_1296x729.jpg"} newsUrl={element.url?element.url:""} author={element.author?element.author:''} source={element.source.name} />
+                                <NewsItem  title={element.title?element.title.slice(0,45):""} discription={element.summary?element.summary.slice(0,85):""+"..."} date={dateFormat(element.published_date, "mmmm dS, yyyy")} src={element.media?element.media:"https://a4.espncdn.com/combiner/i?img=%2Fi%2Fcricket%2Fcricinfo%2F1219926_1296x729.jpg"} newsUrl={element.link?element.link:""} author={element.author?element.author:''} source={element.rights} />
                             </div>
                         ):" "
                     })}
@@ -143,7 +167,8 @@ export class News extends Component {
                     </InfiniteScroll>
                 <div className="d-flex justify-content-center">
                 <nav aria-label="Page navigation example">
-                <ul className="pagination justify-content-center">
+                    {this.state.articals.length} total results {this.state.totalResult}
+                {/* <ul className="pagination justify-content-center">
                     <li className={(this.state.page<=1)?"page-item disabled":"page-item"}>
                     <button className="page-link"  disabled={this.state.page<=1} onClick={this.handlePrevious.bind(i)} >Previous</button>
                     </li>
@@ -153,7 +178,7 @@ export class News extends Component {
                     <li className={(Math.ceil(this.state.totalResult/12) <= this.state.page)?"page-item disabled":"page-item"}>
                     <button className="page-link"  disabled={(Math.ceil(this.state.totalResult/12) <= this.state.page)}  onClick={this.handleNext} >Next</button>
                     </li>
-                </ul>
+                </ul> */}
                 </nav>
                 </div>
             </div>
@@ -161,4 +186,4 @@ export class News extends Component {
     }
 }
 
-export default News
+export default NewNews
